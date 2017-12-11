@@ -141,22 +141,23 @@ static bool copy_internal (int pre_fd, char const *src_name, char const *dst_nam
                            bool *rename_succeeded);
 static bool owner_failure_ok (struct cp_options const *x);
 
-int fileListPreprocess(char *name_space, const char *filenames[]) {
+int getFileNumber(char *name_space) {
   char *namep = name_space;
   int count = 0;
   while (*namep != '\0') {
     count++;
     namep += strlen(namep) + 1;
   }
+  return count;
+}
 
-  filenames = calloc(count, sizeof(char *));
-  namep = name_space;
+void fileListPreprocess(char *name_space, const char *filenames[]) {
+  char *namep = name_space;
   int i = 0;
   while (*namep != '\0') {
     filenames[i++] = namep;
     namep += strlen(namep) + 1;
   }
-  return count;
 }
 
 int vec_open(const char *dir, const char *filenames[], int count, int flags, int* fds) {
@@ -756,8 +757,9 @@ copy_dir (char const *src_name_in, char const *dst_name_in, bool new_dst,
   if (x->dereference == DEREF_COMMAND_LINE_ARGUMENTS)
     non_command_line_options.dereference = DEREF_NEVER;
 
-  const char **filenames;
-  int file_count = fileListPreprocess(name_space, filenames);
+  int file_count = getFileNumber(name_space);
+  const char **filenames = calloc(file_count, sizeof(char *));
+  fileListPreprocess(name_space, filenames);
   int *fds = calloc(file_count, sizeof(int));
   vec_open(src_name_in, filenames, file_count,
       (O_RDONLY | O_BINARY | (x->dereference == DEREF_NEVER ? O_NOFOLLOW : 0)), fds);

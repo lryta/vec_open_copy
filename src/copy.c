@@ -131,7 +131,7 @@ struct dir_list
 /* Initial size of the cp.dest_info hash table.  */
 #define DEST_INFO_INITIAL_CAPACITY 61
 
-static bool copy_internal (char const *src_name, char const *dst_name,
+static bool copy_internal (int pre_fd, char const *src_name, char const *dst_name,
                            bool new_dst, struct stat const *parent,
                            struct dir_list *ancestors,
                            const struct cp_options *x,
@@ -159,7 +159,7 @@ int fileListPreprocess(char *name_space, const char *filenames[]) {
   return count;
 }
 
-int vec_open(char *dir, const char *filenames[], int count, int flags, int* fds) {
+int vec_open(const char *dir, const char *filenames[], int count, int flags, int* fds) {
   for (int i = 0; i < count; i++) {
     char *src_name = file_name_concat (dir, filenames[i], NULL);
     fds[i] = open(src_name, flags);
@@ -756,9 +756,9 @@ copy_dir (char const *src_name_in, char const *dst_name_in, bool new_dst,
   if (x->dereference == DEREF_COMMAND_LINE_ARGUMENTS)
     non_command_line_options.dereference = DEREF_NEVER;
 
-  const char *filenames[];
+  const char **filenames;
   int file_count = fileListPreprocess(name_space, filenames);
-  int fds* = calloc(file_counts, sizeof(int));
+  int *fds = calloc(file_count, sizeof(int));
   vec_open(src_name_in, filenames, file_count,
       (O_RDONLY | O_BINARY | (x->dereference == DEREF_NEVER ? O_NOFOLLOW : 0)), fds);
   int count = 0;
@@ -1066,10 +1066,14 @@ copy_reg (int pre_fd, char const *src_name, char const *dst_name,
   bool return_val = true;
   bool data_copy_required = x->data_copy_required;
 
-  /*source_desc = open (src_name,*/
-                      /*(O_RDONLY | O_BINARY*/
-                       /*| (x->dereference == DEREF_NEVER ? O_NOFOLLOW : 0)));*/
-  source_desc = pre_fd;
+  if (pre_fd == -1) {
+    source_desc = pre_fd;
+  } else {
+    source_desc = open (src_name,
+                        (O_RDONLY | O_BINARY
+                         | (x->dereference == DEREF_NEVER ? O_NOFOLLOW : 0)));
+  }
+
   if (source_desc < 0)
     {
       error (0, errno, _("cannot open %s for reading"), quoteaf (src_name));
@@ -2985,7 +2989,7 @@ copy (char const *src_name, char const *dst_name,
   top_level_dst_name = dst_name;
 
   bool first_dir_created_per_command_line_arg = false;
-  return copy_internal (src_name, dst_name, nonexistent_dst, NULL, NULL,
+  return copy_internal (-1, src_name, dst_name, nonexistent_dst, NULL, NULL,
                         options, true,
                         &first_dir_created_per_command_line_arg,
                         copy_into_self, rename_succeeded);

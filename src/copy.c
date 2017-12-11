@@ -168,6 +168,12 @@ int vec_open(const char *dir, const char *filenames[], int count, int flags, int
   return 0;
 }
 
+int vec_close(int* fds, int count) {
+  for (int i = 0; i < count; i++) {
+    close(fds[i]);
+  }
+}
+
 /* Pointers to the file names:  they're used in the diagnostic that is issued
    when we detect the user is trying to copy a directory into itself.  */
 static char const *top_level_src_name;
@@ -795,6 +801,7 @@ copy_dir (char const *src_name_in, char const *dst_name_in, bool new_dst,
     }
   free (name_space);
   *first_dir_created_per_command_line_arg = new_first_dir_created;
+  vec_close(fds, file_count);
 
   free(fds);
   free(filenames);

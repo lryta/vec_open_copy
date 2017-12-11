@@ -141,6 +141,32 @@ static bool copy_internal (char const *src_name, char const *dst_name,
                            bool *rename_succeeded);
 static bool owner_failure_ok (struct cp_options const *x);
 
+int fileListPreprocess(char *name_space, const char *filenames[]) {
+  char *namep = name_space;
+  int count = 0;
+  while (*namep != '\0') {
+    count++;
+    namep += strlen(namep) + 1;
+  }
+
+  filenames = calloc(count, sizeof(char *));
+  namep = name_space;
+  int i = 0;
+  while (*namep != '\0') {
+    filenames[i++] = namep;
+    namep += strlen(namep) + 1;
+  }
+  return count;
+}
+
+int vec_open(char *dir, const char *filenames[], int count, int flags, int* fds) {
+  for (int i = 0; i < count; i++) {
+    char *src_name = file_name_concat (dir, filenames[i], NULL);
+    fds[i] = open(src_name, flags);
+  }
+  return 0;
+}
+
 /* Pointers to the file names:  they're used in the diagnostic that is issued
    when we detect the user is trying to copy a directory into itself.  */
 static char const *top_level_src_name;
@@ -730,16 +756,24 @@ copy_dir (char const *src_name_in, char const *dst_name_in, bool new_dst,
   if (x->dereference == DEREF_COMMAND_LINE_ARGUMENTS)
     non_command_line_options.dereference = DEREF_NEVER;
 
+  const char *filenames[];
+  int file_count = fileListPreprocess(name_space, filenames);
+  int fds* = calloc(file_counts, sizeof(int));
+  vec_open(src_name_in, filenames, file_count,
+      (O_RDONLY | O_BINARY | (x->dereference == DEREF_NEVER ? O_NOFOLLOW : 0)), fds);
+  int count = 0;
+
   bool new_first_dir_created = false;
   namep = name_space;
   while (*namep != '\0')
     {
+      count += 1;
       bool local_copy_into_self;
       char *src_name = file_name_concat (src_name_in, namep, NULL);
       char *dst_name = file_name_concat (dst_name_in, namep, NULL);
       bool first_dir_created = *first_dir_created_per_command_line_arg;
 
-      ok &= copy_internal (src_name, dst_name, new_dst, src_sb,
+      ok &= copy_internal (fds[count], src_name, dst_name, new_dst, src_sb,
                            ancestors, &non_command_line_options, false,
                            &first_dir_created,
                            &local_copy_into_self, NULL);
@@ -759,6 +793,9 @@ copy_dir (char const *src_name_in, char const *dst_name_in, bool new_dst,
     }
   free (name_space);
   *first_dir_created_per_command_line_arg = new_first_dir_created;
+
+  free(fds);
+  free(filenames);
 
   return ok;
 }
@@ -1012,7 +1049,7 @@ is_probably_sparse (struct stat const *sb)
    SRC_SB is the result of calling XSTAT (aka stat) on SRC_NAME.  */
 
 static bool
-copy_reg (char const *src_name, char const *dst_name,
+copy_reg (int pre_fd, char const *src_name, char const *dst_name,
           const struct cp_options *x,
           mode_t dst_mode, mode_t omitted_permissions, bool *new_dst,
           struct stat const *src_sb)
@@ -1029,9 +1066,10 @@ copy_reg (char const *src_name, char const *dst_name,
   bool return_val = true;
   bool data_copy_required = x->data_copy_required;
 
-  source_desc = open (src_name,
-                      (O_RDONLY | O_BINARY
-                       | (x->dereference == DEREF_NEVER ? O_NOFOLLOW : 0)));
+  /*source_desc = open (src_name,*/
+                      /*(O_RDONLY | O_BINARY*/
+                       /*| (x->dereference == DEREF_NEVER ? O_NOFOLLOW : 0)));*/
+  source_desc = pre_fd;
   if (source_desc < 0)
     {
       error (0, errno, _("cannot open %s for reading"), quoteaf (src_name));
@@ -1841,7 +1879,7 @@ source_is_dst_backup (char const *srcbase, struct stat const *src_st,
    same as) DST_NAME; otherwise, clear it.
    Return true if successful.  */
 static bool
-copy_internal (char const *src_name, char const *dst_name,
+copy_internal (int pre_fd, char const *src_name, char const *dst_name,
                bool new_dst,
                struct stat const *parent,
                struct dir_list *ancestors,
@@ -2640,7 +2678,7 @@ copy_internal (char const *src_name, char const *dst_name,
          normally the same, and the exception (where x->set_mode) is
          used only by 'install', which POSIX does not specify and
          where DST_MODE_BITS is what's wanted.  */
-      if (! copy_reg (src_name, dst_name, x, dst_mode_bits & S_IRWXUGO,
+      if (! copy_reg (pre_fd, src_name, dst_name, x, dst_mode_bits & S_IRWXUGO,
                       omitted_permissions, &new_dst, &src_sb))
         goto un_backup;
     }

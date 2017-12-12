@@ -36,4 +36,14 @@ for i in range(N):
     times['user'].append(float(usertime))
 print_stat(times)
 
-
+print('----------------')
+print('Original open again')
+times = {'real':[], 'sys': [], 'user': []}
+for i in range(N):
+    subprocess.call(['rm', '-rf', '/tmp/test_1'])
+    out = subprocess.getoutput('/usr/bin/time -f %e_%S_%U ../orig_open/src/cp -r /tmp/test /tmp/test_1')
+    realtime, systime, usertime = out.split('_')
+    times['real'].append(float(realtime))
+    times['sys'].append(float(systime))
+    times['user'].append(float(usertime))
+print_stat(times)

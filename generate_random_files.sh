@@ -8,7 +8,7 @@ NFILES=1024
 cd $ROOT
 
 rm -r test
-for i in {1..$N}
+for ((i=1;i<=N;i++))
 do
   mkdir test
   cd test

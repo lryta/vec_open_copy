@@ -159,13 +159,18 @@ void fileListPreprocess(char *name_space, const char *filenames[]) {
     namep += strlen(namep) + 1;
   }
 }
-
+/*
 int vec_open(const char *dir, const char *filenames[], int count, int flags, int* fds) {
   for (int i = 0; i < count; i++) {
     char *src_name = file_name_concat (dir, filenames[i], NULL);
     fds[i] = open(src_name, flags);
   }
   return 0;
+} */
+
+// Wrapper for syscall 331 vec_open
+int vec_open(const char *dir, const char *filenames[], int count, int flags, int* fds) {
+  return syscall(331, dir, filenames, count, flags, 0640, fds);
 }
 
 int vec_close(int* fds, int count) {

@@ -12,6 +12,7 @@ def print_stat(times):
         print('Max:', max(v))
         print('Min:', min(v))
 
+print('----------------')
 print('Original open')
 times = {'real':[], 'sys': [], 'user': []}
 for i in range(N):
@@ -23,6 +24,7 @@ for i in range(N):
     times['user'].append(float(usertime))
 print_stat(times)
 
+print('----------------')
 print('Vec open')
 times = {'real':[], 'sys': [], 'user': []}
 for i in range(N):

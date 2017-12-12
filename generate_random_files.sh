@@ -1,7 +1,7 @@
 #!/bin/bash
 ROOT=/tmp/
 #Number of levels
-N=10
+N=20
 #Number of 4k files to generate
 NFILES=1024
 
